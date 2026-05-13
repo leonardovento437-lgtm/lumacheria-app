@@ -589,7 +589,10 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
 var GAS_URL = "https://script.google.com/macros/s/AKfycbwfvSW6w5ohPWwBepqbHr76DamrYyxJNYit0iv5y8stLf10-mhxHbgox_LuEWDoZMkFTg/exec";
 
 function gasPost(payload, onOk, onErr) {
-  fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)})
+  // Use no-cors fetch - GAS redirects POST to GET which loses body
+  // So we encode payload as a GET parameter instead
+  var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify(payload));
+  fetch(url)
     .then(function(r){return r.json();})
     .then(function(d){if(d.ok && onOk) onOk(); else if(onErr) onErr(JSON.stringify(d));})
     .catch(function(e){if(onErr) onErr(e.message);});
