@@ -336,9 +336,6 @@ function renderProdotti(q){
   const el=document.getElementById('lista-prodotti');
   if(!list.length){el.innerHTML='<div class="empty"><span class="empty-snail">🐌</span>Nessun prodotto trovato</div>';return;}
   el.innerHTML=list.map(p=>{
-    const pc=p.profitto_consigliato;
-    const hasCosti=p.cvu!=null||p.cfu!=null||p.costo_tot!=null||p.ct1!=null||p.ct2!=null;
-    const hasPrezzo=p.prezzo_consigliato!=null||pc!=null;
     return `<div class="prod-card">
       <div class="prod-card-header">
         <div class="card-snail">🐌</div>
@@ -349,24 +346,23 @@ function renderProdotti(q){
         </div>
       </div>
       <div class="prod-card-body">
-        ${hasCosti?`<div class="section-lbl">📊 Struttura costi</div>
+        <div class="section-lbl">📊 Struttura costi</div>
         <div class="cost-row">
-          <div class="cost-box ${p.cvu!=null?'cb-cvu':'cb-na'}"><div class="cb-lbl">CVU</div><div class="cb-val">${e(p.cvu)}</div></div>
-          <div class="cost-box ${p.cfu!=null?'cb-cfu':'cb-na'}"><div class="cb-lbl">CFU</div><div class="cb-val">${e(p.cfu)}</div></div>
-          <div class="cost-box ${p.costo_tot!=null?'cb-ct':'cb-na'}"><div class="cb-lbl">CT</div><div class="cb-val">${e(p.costo_tot)}</div></div>
+          <div class="cost-box cb-cvu"><div class="cb-lbl">CVU</div><div class="cb-val">${e(p.cvu)}</div></div>
+          <div class="cost-box cb-cfu"><div class="cb-lbl">CFU</div><div class="cb-val">${e(p.cfu)}</div></div>
+          <div class="cost-box cb-ct"><div class="cb-lbl">CT</div><div class="cb-val">${e(p.costo_tot)}</div></div>
         </div>
-        ${p.ct1!=null||p.ct2!=null?`<div class="cost-row">
-          <div class="cost-box ${p.ct1!=null?'cb-ct1':'cb-na'}"><div class="cb-lbl">CT1</div><div class="cb-val">${e(p.ct1)}</div></div>
-          <div class="cost-box ${p.ct2!=null?'cb-ct2':'cb-na'}"><div class="cb-lbl">CT2</div><div class="cb-val">${e(p.ct2)}</div></div>
+        <div class="cost-row">
+          <div class="cost-box cb-ct2"><div class="cb-lbl">CT2</div><div class="cb-val">${e(p.ct2)}</div></div>
           <div class="cost-box cb-na"></div>
-        </div>`:''}`:'' }
-        ${hasCosti&&hasPrezzo?'<div class="prod-divider"></div>':''}
-        ${hasPrezzo?`<div class="section-lbl">💰 Prezzo & Profitto</div>
+          <div class="cost-box cb-na"></div>
+        </div>
+        <div class="prod-divider"></div>
+        <div class="section-lbl">💰 Prezzi</div>
         <div class="prezzo-row">
-          <div class="cost-box ${p.prezzo_consigliato!=null?'cb-pc':'cb-na'}" style="padding:9px 8px"><div class="cb-lbl">Prezzo cons.</div><div class="cb-val">${e(p.prezzo_consigliato)}</div></div>
-          <div class="cost-box ${pc==null?'cb-na':pc>0?'cb-prof-pos':'cb-prof-neg'}" style="padding:9px 8px"><div class="cb-lbl">Profitto</div><div class="cb-val">${e(pc)}</div></div>
-          ${p.p_medio_2025?`<div class="cost-box cb-ct1" style="padding:9px 8px"><div class="cb-lbl">P. Medio 2025</div><div class="cb-val">${e(p.p_medio_2025)}</div></div>`:''}
-        </div>`:''}
+          <div class="cost-box cb-pc" style="padding:9px 8px"><div class="cb-lbl">Prezzo cons.</div><div class="cb-val">${e(p.prezzo_consigliato)}</div></div>
+          <div class="cost-box cb-ct1" style="padding:9px 8px"><div class="cb-lbl">P. Medio 2025</div><div class="cb-val">${e(p.p_medio_2025)}</div></div>
+        </div>
       </div>
       <div style="padding:8px 12px 12px;display:flex;gap:8px">
         <button onclick="editProdotto('${p.id}')" style="flex:1;padding:8px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:10px;font-size:13px;cursor:pointer">✏️ Modifica</button>
