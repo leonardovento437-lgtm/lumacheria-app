@@ -604,58 +604,30 @@ function gasPost(payload, onOk, onErr) {
 }
 
 function loadFromGAS() {
+  // Dati prodotti e dettaglio vengono dall'embedded - non sovrascrivere
+  // Carica solo i clienti aggiunti via app dal GAS
   var loading = document.getElementById('loading');
-  if (loading) loading.style.display = 'flex';
   fetch(GAS_URL + '?action=getData&t=' + Date.now())
     .then(function(r){return r.json();})
     .then(function(data){
-      var prodotti = data.prodotti || [];
-      DB.length = 0;
-      prodotti.forEach(function(p){
-        var ct = Number(p.costo_tot)||0, pc = Number(p.prezzo_consigliato)||0;
-        DB.push({
-          id: String(p.id), codice: p.codice, nome: p.nome,
-          unita: (p.unita||'NR').toUpperCase(),
-          cvu: Number(p.cvu)||0, cfu: Number(p.cfu)||0,
-          costo_tot: ct, ct1: Number(p.ct1)||0, ct2: Number(p.ct2)||0,
-          listino_agenti: Number(p.listino_agenti)||0,
-          listino_grossisti: Number(p.listino_grossisti)||0,
-          listino_vendita_diretta: Number(p.listino_vendita_diretta)||0,
-          prezzo_consigliato: pc,
-          profitto_consigliato: Math.round((pc-ct)*100)/100,
-          dettaglio: {}
-        });
-      });
-      var det = data.dettaglio || [];
-      var di = {};
-      det.forEach(function(d){
-        if (!d.codice || !d.categoria) return;
-        if (!di[d.codice]) di[d.codice] = {};
-        di[d.codice][d.categoria] = {min:Number(d.prezzo_min)||0, medio:Number(d.prezzo_medio)||0, max:Number(d.prezzo_max)||0};
-      });
-      DB.forEach(function(p){ p.dettaglio = di[p.codice] || {}; });
-
-      // Merge GAS clienti (nuovi aggiunti dall'app) con quelli embedded
+      // Merge clienti GAS con quelli embedded
       var gasClienti = (data.clienti || []).map(function(c){
         return {id: String(c.id), nome: c.nome||'', localita: c.citta||'',
           provincia: '', categoria: c.categoria||'',
           telefono: c.telefono||'', email: c.email||'', prodotti: []};
       });
-      // Add GAS clients not already in embedded list
       gasClienti.forEach(function(gc){
         if (!CLIENTI.find(function(x){ return x.id===gc.id; })) {
           CLIENTI.push(gc);
         } else {
-          // Update fields from GAS (nome, citta, etc) but keep prodotti
           var ex = CLIENTI.find(function(x){ return x.id===gc.id; });
           if (ex) { ex.nome=gc.nome||ex.nome; ex.localita=gc.localita||ex.localita; ex.categoria=gc.categoria||ex.categoria; ex.telefono=gc.telefono||ex.telefono; ex.email=gc.email||ex.email; }
         }
       });
-
       var ps = document.getElementById('hc-prod-sub');
       var cs = document.getElementById('hc-cli-sub');
       if (ps) ps.textContent = DB.length + ' prodotti · CVU, CFU, CT, prezzi';
-      if (cs) cs.textContent = CLIENTI.length + ' clienti · 10 categorie';
+      if (cs) cs.textContent = CLIENTI.length + ' clienti · ' + CATEGORIE.length + ' categorie';
       var lu = document.getElementById('last-update');
       if (lu) { var d2=new Date(); lu.textContent='Aggiornato: '+d2.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}); }
       var btn = document.getElementById('refresh-btn');
@@ -665,9 +637,16 @@ function loadFromGAS() {
       showPage('home');
     })
     .catch(function(err){
+      // Se GAS non risponde, mostra comunque i dati embedded
       var btn = document.getElementById('refresh-btn');
-      if (btn) { btn.textContent='❌ Errore'; btn.disabled=false; }
-      if (loading) loading.innerHTML='<div style="color:white;text-align:center;padding:40px 20px"><div style="font-size:48px">🐌</div><div style="margin:12px 0">Errore connessione</div><div style="font-size:12px;opacity:.7">' + err.message + '</div><button onclick="location.reload()" style="margin-top:16px;padding:12px 28px;background:white;color:#8B1A1A;border:none;border-radius:20px;font-weight:700;cursor:pointer">Riprova</button></div>';
+      if (btn) { btn.textContent='🔄 Aggiorna'; btn.disabled=false; }
+      if (loading) { loading.style.opacity='0'; setTimeout(function(){loading.style.display='none';},500); }
+      var ps = document.getElementById('hc-prod-sub');
+      var cs = document.getElementById('hc-cli-sub');
+      if (ps) ps.textContent = DB.length + ' prodotti · CVU, CFU, CT, prezzi';
+      if (cs) cs.textContent = CLIENTI.length + ' clienti';
+      buildCatPills();
+      showPage('home');
     });
 }
 
