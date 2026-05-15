@@ -531,7 +531,18 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
         function col(row, name) {
           var nameTrim = name.trim().toUpperCase().replace(/\s+/g,' ');
           var idx = headers.findIndex(function(h){ return h && String(h).trim().toUpperCase().replace(/\s+/g,' ') === nameTrim; });
+          if (idx < 0) {
+            // Try partial match
+            idx = headers.findIndex(function(h){ return h && String(h).trim().toUpperCase().replace(/\s+/g,' ').includes(nameTrim.replace(/\s+/g,'').substring(0,6)); });
+          }
           return idx >= 0 ? row[idx] : null;
+        }
+        function colByKey(row, keys) {
+          for (var k=0; k<keys.length; k++) {
+            var v = col(row, keys[k]);
+            if (v !== null && v !== undefined && v !== '') return v;
+          }
+          return null;
         }
 
         var newProdotti = [];
@@ -549,7 +560,7 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
             costo_tot: ct, ct1: n(col(row,'CT1')), ct2: n(col(row,'CT2')),
             listino_grossisti: n(col(row,'LISTINO GROSSISTI')),
             listino_vendita_diretta: n(col(row,'LISTINO VENDITA DIRETTA')),
-            p_medio_2025: n(col(row,'P_ MEDIO 2025 ')||col(row,'P_MEDIO_2025')||col(row,'P. MEDIO 2025')||col(row,'P_MEDIO 2025')||col(row,'P MEDIO 2025')||0),
+            p_medio_2025: n(colByKey(row,['P_ MEDIO 2025 ','P_MEDIO_2025','P. MEDIO 2025','P MEDIO 2025','PREZZO MEDIO 2025'])||0),
             prezzo_consigliato: pc,
             profitto_consigliato: Math.round((pc-ct)*100)/100
           });
