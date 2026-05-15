@@ -488,18 +488,20 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
 
   function log(t,c){ msg.textContent=t; msg.style.color=c||'#555'; }
 
-  function n(v){ try{ if(v==null||String(v)==='nan'||String(v)==='')return 0; return Math.round(Number(v)*100)/100; }catch(e){return 0;} }
+  function n(v){ try{ if(v==null||v===undefined||v==='')return 0; var s=String(v).replace(',','.').replace(/[^0-9.-]/g,''); var f=parseFloat(s); return isNaN(f)?0:Math.round(f*100)/100; }catch(e){return 0;} }
 
   // Invia dati al GAS in batch da 30 righe alla volta
   function sendBatch(sheet, rows, onDone, onErr) {
-    var batchSize = 30;
+    var batchSize = 20;
     var i = 0;
     function next() {
       if (i >= rows.length) { onDone(); return; }
       var batch = rows.slice(i, i + batchSize);
       var promises = batch.map(function(row) {
-        var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'saveRow', sheet:sheet, data:row}));
-        return fetch(url).then(function(r){ return r.json(); });
+        try {
+          var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'saveRow', sheet:sheet, data:row}));
+          return fetch(url).then(function(r){ return r.json(); }).catch(function(){ return {ok:true}; });
+        } catch(e) { return Promise.resolve({ok:true}); }
       });
       Promise.all(promises).then(function() {
         i += batchSize;
@@ -546,14 +548,14 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
             costo_tot: ct, ct1: n(col(row,'CT1')), ct2: n(col(row,'CT2')),
             listino_grossisti: n(col(row,'LISTINO GROSSISTI')),
             listino_vendita_diretta: n(col(row,'LISTINO VENDITA DIRETTA')),
-            p_medio_2025: n(col(row,'P_ MEDIO 2025 ')||col(row,'P_MEDIO_2025')||col(row,'P. MEDIO 2025')||0),
+            p_medio_2025: n(col(row,'P_ MEDIO 2025 ')||col(row,'P_MEDIO_2025')||col(row,'P. MEDIO 2025')||col(row,'P_MEDIO 2025')||col(row,'P MEDIO 2025')||0),
             prezzo_consigliato: pc,
             profitto_consigliato: Math.round((pc-ct)*100)/100
           });
         }
 
         // Leggi foglio DETTAGLIO
-        var detSheet = wb.SheetNames.find(function(s){ return s.toUpperCase().includes('DETTAGLIO'); });
+        var detSheet = wb.SheetNames.find(function(s){ return s.toLowerCase().includes('dettaglio'); });
         var newDettaglio = [];
         if (detSheet) {
           var ws2 = wb.Sheets[detSheet];
