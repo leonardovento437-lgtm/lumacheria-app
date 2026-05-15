@@ -488,101 +488,109 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
 
   function log(t,c){ msg.textContent=t; msg.style.color=c||'#555'; }
 
-  // ── Pre-carica DB da localStorage (senza chiamare loadData) ──────
-  try{
-    var s = localStorage.getItem('lum_db');
-    if(s){
-      var d = JSON.parse(s);
-      if(d && d.length){
-        DB.length = 0;
-        for(var i=0; i<d.length; i++) DB.push(d[i]);
-        // NON chiamare loadData qui: il secondo script gestisce tutto
-      }
-    }
-  }catch(e){}
+  function n(v){ try{ if(v==null||String(v)==='nan'||String(v)==='')return 0; return Math.round(Number(v)*100)/100; }catch(e){return 0;} }
 
-  // ── Click pulsante ──────────────────────────────────────
-  btn.addEventListener('click', function(){
-    if(typeof XLSX === 'undefined'){
-      log('Serve connessione internet per il primo utilizzo','red');
-      return;
+  // Invia dati al GAS in batch da 30 righe alla volta
+  function sendBatch(sheet, rows, onDone, onErr) {
+    var batchSize = 30;
+    var i = 0;
+    function next() {
+      if (i >= rows.length) { onDone(); return; }
+      var batch = rows.slice(i, i + batchSize);
+      var promises = batch.map(function(row) {
+        var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'saveRow', sheet:sheet, data:row}));
+        return fetch(url).then(function(r){ return r.json(); });
+      });
+      Promise.all(promises).then(function() {
+        i += batchSize;
+        log('⏳ Invio ' + sheet + ': ' + Math.min(i, rows.length) + '/' + rows.length + '...', '#555');
+        setTimeout(next, 300);
+      }).catch(onErr);
     }
-    inp.click();
-  });
+    next();
+  }
 
-  // ── Lettura file Excel ──────────────────────────────────
+  btn.addEventListener('click', function(){ inp.click(); });
   inp.addEventListener('change', function(){
     var file = inp.files[0];
-    if(!file) return;
-    log('Lettura di: ' + file.name);
-
+    if (!file) return;
+    log('⏳ Lettura file...', '#555');
     var reader = new FileReader();
-    reader.onload = function(ev){
-      try{
-        var wb = XLSX.read(new Uint8Array(ev.target.result), {type:'array', cellFormula:false});
-        var wsA = wb.Sheets['alimentare'];
-        if(!wsA){ log('Foglio "alimentare" non trovato','red'); return; }
+    reader.onload = function(e) {
+      try {
+        var wb = XLSX.read(e.target.result, {type:'array'});
 
-        var rows = XLSX.utils.sheet_to_json(wsA, {header:1, defval:null, raw:true});
+        // Leggi foglio alimentare (2) o alimentare
+        var sheetName = wb.SheetNames.find(function(s){ return s.toLowerCase().includes('alimentare'); }) || wb.SheetNames[0];
+        var ws = wb.Sheets[sheetName];
+        var rows = XLSX.utils.sheet_to_json(ws, {header:1});
+        var headers = rows[0];
 
-        function n(v){ return (v!=null && v!=='' && !isNaN(Number(v))) ? Math.round(Number(v)*100)/100 : 0; }
+        function col(row, name) {
+          var idx = headers.findIndex(function(h){ return h && String(h).trim().toUpperCase() === name.toUpperCase(); });
+          return idx >= 0 ? row[idx] : null;
+        }
 
-        var newDB = [];
-        for(var r=1; r<rows.length; r++){
+        var newProdotti = [];
+        for (var r = 1; r < rows.length; r++) {
           var row = rows[r];
-          if(!row) continue;
-          var cod = row[7];
-          if(!cod || typeof cod !== 'string' || !cod.trim()) continue;
-          var pc = n(row[28]), ct = n(row[22]);
-          newDB.push({
+          var cod = col(row, 'CD_AR');
+          if (!cod || typeof cod !== 'string' || !cod.trim()) continue;
+          var ct = n(col(row, 'COSTO TOT')), pc = n(col(row, 'PREZZO CONSIGLIATO'));
+          newProdotti.push({
             id: String(r),
             codice: cod.trim(),
-            nome: (row[8] || '').toString(),
-            unita: ((row[9] || 'NR') + '').toUpperCase(),
-            cvu: n(row[18]), cfu: n(row[19]),
-            costo_tot: ct, ct1: n(row[23]), ct2: n(row[24]),
+            nome: String(col(row,'AR_Descrizione')||''),
+            unita: String(col(row,'Cd_ARMisura')||'NR').toUpperCase(),
+            cvu: n(col(row,'CVU')), cfu: n(col(row,'CFU')),
+            costo_tot: ct, ct1: n(col(row,'CT1')), ct2: n(col(row,'CT2')),
+            listino_grossisti: n(col(row,'LISTINO GROSSISTI')),
+            listino_vendita_diretta: n(col(row,'LISTINO VENDITA DIRETTA')),
+            p_medio_2025: n(col(row,'P_ MEDIO 2025 ')||col(row,'P_MEDIO_2025')||col(row,'P. MEDIO 2025')||0),
             prezzo_consigliato: pc,
-            profitto_consigliato: n(pc - ct),
-            dettaglio: {}
+            profitto_consigliato: Math.round((pc-ct)*100)/100
           });
         }
 
-        if(!newDB.length){ log('Nessun prodotto trovato','red'); return; }
-
-        // DETTAGLIO opzionale
-        try{
-          var wsD = wb.Sheets['DETTAGLIO'];
-          if(wsD){
-            var drows = XLSX.utils.sheet_to_json(wsD, {header:1, defval:null, raw:true});
-            var di = {};
-            for(var j=1; j<drows.length; j++){
-              var dr = drows[j];
-              if(!dr || !dr[0] || !dr[2]) continue;
-              var dc = dr[0] + '';
-              if(!di[dc]) di[dc] = {};
-              di[dc][dr[2]] = { min:n(dr[3]), medio:n(dr[4]), max:n(dr[5]) };
-            }
-            for(var k=0; k<newDB.length; k++)
-              newDB[k].dettaglio = di[newDB[k].codice] || {};
+        // Leggi foglio DETTAGLIO
+        var detSheet = wb.SheetNames.find(function(s){ return s.toUpperCase().includes('DETTAGLIO'); });
+        var newDettaglio = [];
+        if (detSheet) {
+          var ws2 = wb.Sheets[detSheet];
+          var rows2 = XLSX.utils.sheet_to_json(ws2, {header:1});
+          var h2 = rows2[0];
+          function col2(row, name) {
+            var idx = h2.findIndex(function(h){ return h && String(h).trim().toUpperCase().includes(name.toUpperCase()); });
+            return idx >= 0 ? row[idx] : null;
           }
-        }catch(e2){}
+          for (var r2 = 1; r2 < rows2.length; r2++) {
+            var row2 = rows2[r2];
+            var cod2 = col2(row2,'CODICE'), cat = col2(row2,'CATEGORIA');
+            if (!cod2 || !cat) continue;
+            var detId = String(cod2).trim() + '_' + String(cat).trim().replace(/[^a-zA-Z0-9]/g,'_');
+            newDettaglio.push({
+              id: detId,
+              codice: String(cod2).trim(),
+              categoria: String(cat).trim(),
+              prezzo_min: n(col2(row2,'MIN')||col2(row2,'PREZZO MIN')),
+              prezzo_medio: n(col2(row2,'MEDIO')||col2(row2,'PREZZO MEDIO')),
+              prezzo_max: n(col2(row2,'MAX')||col2(row2,'PREZZO MAX')),
+              qty: 0, fatturato: 0
+            });
+          }
+        }
 
-        // Salva in localStorage e aggiorna l'app
-        localStorage.setItem('lum_db', JSON.stringify(newDB));
-        localStorage.setItem('lum_db_updated', new Date().toISOString());
-        DB.length = 0;
-        for(var x=0; x<newDB.length; x++) DB.push(newDB[x]);
+        log('⏳ Invio ' + newProdotti.length + ' prodotti al server...', '#555');
 
-        // Aggiorna UI senza chiamare loadData (che sovrascrive con i dati del server GAS)
-        var ps = document.getElementById('hc-prod-sub');
-        if(ps) ps.textContent = newDB.length + ' prodotti · CVU, CFU, CT, prezzi';
-        var lu = document.getElementById('last-update');
-        if(lu){ var nd=new Date(); lu.textContent='Aggiornato: '+nd.toLocaleDateString('it-IT')+' '+nd.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}); }
+        sendBatch('prodotti', newProdotti, function() {
+          log('⏳ Invio ' + newDettaglio.length + ' dettagli...', '#555');
+          sendBatch('dettaglio', newDettaglio, function() {
+            log('✅ ' + newProdotti.length + ' prodotti e ' + newDettaglio.length + ' dettagli aggiornati!', '#2D7A4A');
+            setTimeout(function(){ log(''); loadFromGAS(); }, 2000);
+          }, function(err){ log('Errore dettaglio: ' + err.message, 'red'); });
+        }, function(err){ log('Errore prodotti: ' + err.message, 'red'); });
 
-        log('✅ ' + newDB.length + ' prodotti aggiornati!', '#2D7A4A');
-        setTimeout(function(){ log(''); }, 5000);
-
-      }catch(err){ log('Errore: ' + err.message, 'red'); }
+      } catch(err){ log('Errore: ' + err.message, 'red'); }
       inp.value = '';
     };
     reader.readAsArrayBuffer(file);
@@ -604,26 +612,63 @@ function gasPost(payload, onOk, onErr) {
 }
 
 function loadFromGAS() {
-  // Dati prodotti e dettaglio vengono dall'embedded - non sovrascrivere
-  // Carica solo i clienti aggiunti via app dal GAS
   var loading = document.getElementById('loading');
   fetch(GAS_URL + '?action=getData&t=' + Date.now())
     .then(function(r){return r.json();})
     .then(function(data){
-      // Merge clienti GAS con quelli embedded
+
+      // Prodotti: usa GAS se ha dati, altrimenti usa embedded
+      var gasProdotti = data.prodotti || [];
+      if (gasProdotti.length > 0) {
+        DB.length = 0;
+        gasProdotti.forEach(function(p){
+          var ct = Number(p.costo_tot)||0, pc = Number(p.prezzo_consigliato)||0;
+          DB.push({
+            id: String(p.id), codice: p.codice||'', nome: p.nome||'',
+            unita: (p.unita||'NR').toUpperCase(),
+            cvu: Number(p.cvu)||0, cfu: Number(p.cfu)||0,
+            costo_tot: ct, ct1: Number(p.ct1)||0, ct2: Number(p.ct2)||0,
+            listino_grossisti: Number(p.listino_grossisti)||0,
+            listino_vendita_diretta: Number(p.listino_vendita_diretta)||0,
+            p_medio_2025: Number(p.p_medio_2025)||0,
+            prezzo_consigliato: pc,
+            profitto_consigliato: Math.round((pc-ct)*100)/100,
+            dettaglio: {}
+          });
+        });
+      }
+
+      // Dettaglio: sovrascrive su prodotti
+      var gasDettaglio = data.dettaglio || [];
+      gasDettaglio.forEach(function(d){
+        if (!d.codice || !d.categoria) return;
+        var prod = DB.find(function(x){ return x.codice===String(d.codice); });
+        if (prod) {
+          if (!prod.dettaglio) prod.dettaglio = {};
+          prod.dettaglio[String(d.categoria)] = {
+            min: Number(d.prezzo_min)||0,
+            medio: Number(d.prezzo_medio)||0,
+            max: Number(d.prezzo_max)||0
+          };
+        }
+      });
+
+      // Clienti: merge GAS + embedded
       var gasClienti = (data.clienti || []).map(function(c){
         return {id: String(c.id), nome: c.nome||'', localita: c.citta||'',
           provincia: '', categoria: c.categoria||'',
           telefono: c.telefono||'', email: c.email||'', prodotti: []};
       });
       gasClienti.forEach(function(gc){
-        if (!CLIENTI.find(function(x){ return x.id===gc.id; })) {
-          CLIENTI.push(gc);
-        } else {
-          var ex = CLIENTI.find(function(x){ return x.id===gc.id; });
-          if (ex) { ex.nome=gc.nome||ex.nome; ex.localita=gc.localita||ex.localita; ex.categoria=gc.categoria||ex.categoria; ex.telefono=gc.telefono||ex.telefono; ex.email=gc.email||ex.email; }
+        var ex = CLIENTI.find(function(x){ return x.id===gc.id; });
+        if (!ex) { CLIENTI.push(gc); }
+        else {
+          ex.nome = gc.nome||ex.nome; ex.localita = gc.localita||ex.localita;
+          ex.categoria = gc.categoria||ex.categoria;
+          ex.telefono = gc.telefono||ex.telefono; ex.email = gc.email||ex.email;
         }
       });
+
       var ps = document.getElementById('hc-prod-sub');
       var cs = document.getElementById('hc-cli-sub');
       if (ps) ps.textContent = DB.length + ' prodotti · CVU, CFU, CT, prezzi';
@@ -637,14 +682,12 @@ function loadFromGAS() {
       showPage('home');
     })
     .catch(function(err){
-      // Se GAS non risponde, mostra comunque i dati embedded
+      // Fallback: usa dati embedded
       var btn = document.getElementById('refresh-btn');
       if (btn) { btn.textContent='🔄 Aggiorna'; btn.disabled=false; }
       if (loading) { loading.style.opacity='0'; setTimeout(function(){loading.style.display='none';},500); }
       var ps = document.getElementById('hc-prod-sub');
-      var cs = document.getElementById('hc-cli-sub');
       if (ps) ps.textContent = DB.length + ' prodotti · CVU, CFU, CT, prezzi';
-      if (cs) cs.textContent = CLIENTI.length + ' clienti';
       buildCatPills();
       showPage('home');
     });
