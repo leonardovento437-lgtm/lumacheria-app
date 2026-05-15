@@ -523,13 +523,14 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
         var wb = XLSX.read(e.target.result, {type:'array'});
 
         // Leggi foglio alimentare (2) o alimentare
-        var sheetName = wb.SheetNames.find(function(s){ return s.toLowerCase().includes('alimentare'); }) || wb.SheetNames[0];
+        var sheetName = wb.SheetNames.find(function(s){ return s.toLowerCase().trim() === 'alimentare (2)'; }) || wb.SheetNames.find(function(s){ return s.toLowerCase().includes('alimentare'); }) || wb.SheetNames[0];
         var ws = wb.Sheets[sheetName];
         var rows = XLSX.utils.sheet_to_json(ws, {header:1});
         var headers = rows[0];
 
         function col(row, name) {
-          var idx = headers.findIndex(function(h){ return h && String(h).trim().toUpperCase() === name.toUpperCase(); });
+          var nameTrim = name.trim().toUpperCase().replace(/\s+/g,' ');
+          var idx = headers.findIndex(function(h){ return h && String(h).trim().toUpperCase().replace(/\s+/g,' ') === nameTrim; });
           return idx >= 0 ? row[idx] : null;
         }
 
