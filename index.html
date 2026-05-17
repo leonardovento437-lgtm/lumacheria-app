@@ -528,19 +528,29 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
         var rows = XLSX.utils.sheet_to_json(ws, {header:1});
         var headers = rows[0];
 
+        // Build column index map from headers
+        var colMap = {};
+        headers.forEach(function(h, i) {
+          if (h) colMap[String(h).trim().toUpperCase().replace(/\s+/g,'_')] = i;
+        });
+        
         function col(row, name) {
-          var nameTrim = name.trim().toUpperCase().replace(/\s+/g,' ');
-          var idx = headers.findIndex(function(h){ return h && String(h).trim().toUpperCase().replace(/\s+/g,' ') === nameTrim; });
-          if (idx < 0) {
-            // Try partial match
-            idx = headers.findIndex(function(h){ return h && String(h).trim().toUpperCase().replace(/\s+/g,' ').includes(nameTrim.replace(/\s+/g,'').substring(0,6)); });
-          }
-          return idx >= 0 ? row[idx] : null;
-        }
-        function colByKey(row, keys) {
+          // Try exact match first
+          var key = name.trim().toUpperCase().replace(/\s+/g,'_');
+          if (colMap[key] !== undefined) return row[colMap[key]];
+          // Try partial match
+          var keys = Object.keys(colMap);
           for (var k=0; k<keys.length; k++) {
-            var v = col(row, keys[k]);
-            if (v !== null && v !== undefined && v !== '') return v;
+            if (keys[k].includes(key.substring(0,6)) || key.includes(keys[k].substring(0,6))) {
+              return row[colMap[keys[k]]];
+            }
+          }
+          return null;
+        }
+        function colByKey(row, names) {
+          for (var k=0; k<names.length; k++) {
+            var v = col(row, names[k]);
+            if (v !== null && v !== undefined && String(v).trim() !== '') return v;
           }
           return null;
         }
