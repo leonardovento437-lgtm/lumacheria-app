@@ -527,6 +527,11 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
         var ws = wb.Sheets[sheetName];
         var rows = XLSX.utils.sheet_to_json(ws, {header:1});
         var headers = rows[0];
+        // DEBUG: log headers and p_medio value
+        var pIdx = headers.findIndex(function(h){ return h && String(h).toUpperCase().includes('MEDIO'); });
+        console.log('Headers MEDIO index:', pIdx, 'value:', pIdx>=0 ? headers[pIdx] : 'NOT FOUND');
+        console.log('First row p_medio value:', pIdx>=0 ? rows[1][pIdx] : 'N/A');
+        console.log('All headers:', headers.map(function(h,i){return i+':'+h;}).join(', '));
 
         // Build column index map from headers
         var colMap = {};
