@@ -575,7 +575,7 @@ document.querySelectorAll('.page').forEach(p=>{if(!p.classList.contains('active'
             costo_tot: ct, ct1: n(col(row,'CT1')), ct2: n(col(row,'CT2')),
             listino_grossisti: n(col(row,'LISTINO GROSSISTI')),
             listino_vendita_diretta: n(col(row,'LISTINO VENDITA DIRETTA')),
-            p_medio_2025: n(colByKey(row,['P_MEDIO_2025','P_ MEDIO 2025 ','P_MEDIO 2025','P. MEDIO 2025','P MEDIO 2025','PREZZO MEDIO 2025'])||0),
+            p_medio_2025: n(row[colMap['P__MEDIO_2025'] !== undefined ? colMap['P__MEDIO_2025'] : colMap['P_MEDIO_2025'] !== undefined ? colMap['P_MEDIO_2025'] : 24]||0),
             prezzo_consigliato: pc,
             profitto_consigliato: Math.round((pc-ct)*100)/100
           });
