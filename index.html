@@ -103,18 +103,18 @@ body{font-family:'Lato',sans-serif;color:var(--testo);max-width:430px;margin:0 a
 .cost-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:5px;margin-bottom:5px}
 .cost-box{border-radius:11px;padding:8px 6px;text-align:center}
 .cb-lbl{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:3px;opacity:.85}
-.cb-val{font-size:18px;font-weight:700;font-family:'Playfair Display',serif}
-.cb-na{background:var(--sfondo)}.cb-na .cb-lbl{color:var(--bordo)}.cb-na .cb-val{color:var(--bordo)}
-.cb-cvu{background:var(--verde-pale);border:1px solid var(--verde-light)}.cb-cvu .cb-lbl,.cb-cvu .cb-val{color:var(--verde)}
-.cb-cfu{background:var(--oro-light);border:1px solid #F0D070}.cb-cfu .cb-lbl,.cb-cfu .cb-val{color:#8B6200}
-.cb-ct{background:#EDE8F8;border:1px solid #C8BAEA}.cb-ct .cb-lbl,.cb-ct .cb-val{color:#4A2A90}
-.cb-ct1{background:#FDE8E8;border:1px solid #EAB8B8}.cb-ct1 .cb-lbl,.cb-ct1 .cb-val{color:#8B1A1A}
-.cb-ct2{background:#E8EDF8;border:1px solid #B8C8EA}.cb-ct2 .cb-lbl,.cb-ct2 .cb-val{color:#1A3A7A}
+.cb-val{font-size:18px;font-weight:700;font-family:'Playfair Display',seriffont-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-na{background:var(--sfondo)}.cb-na .cb-lbl{color:var(--bordo)}.cb-na .cb-val{color:var(--bordo)font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-cvu{background:var(--verde-pale);border:1px solid var(--verde-light)}.cb-cvu .cb-lbl,.cb-cvu .cb-val{color:var(--verde)font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-cfu{background:var(--oro-light);border:1px solid #F0D070}.cb-cfu .cb-lbl,.cb-cfu .cb-val{color:#8B6200font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-ct{background:#EDE8F8;border:1px solid #C8BAEA}.cb-ct .cb-lbl,.cb-ct .cb-val{color:#4A2A90font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-ct1{background:#FDE8E8;border:1px solid #EAB8B8}.cb-ct1 .cb-lbl,.cb-ct1 .cb-val{color:#8B1A1Afont-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-ct2{background:#E8EDF8;border:1px solid #B8C8EA}.cb-ct2 .cb-lbl,.cb-ct2 .cb-val{color:#1A3A7Afont-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
 .prod-divider{height:1px;background:var(--bordo);margin:9px 0}
 .prezzo-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.cb-pc{background:#E6F0FA;border:1px solid #A8C8EA}.cb-pc .cb-lbl,.cb-pc .cb-val{color:#0A3060}
-.cb-prof-pos{background:var(--verde-pale);border:1px solid var(--verde-light)}.cb-prof-pos .cb-lbl,.cb-prof-pos .cb-val{color:var(--verde)}
-.cb-prof-neg{background:var(--rosso-pale);border:1px solid var(--rosso-light)}.cb-prof-neg .cb-lbl,.cb-prof-neg .cb-val{color:var(--rosso)}
+.cb-pc{background:#E6F0FA;border:1px solid #A8C8EA}.cb-pc .cb-lbl,.cb-pc .cb-val{color:#0A3060font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-prof-pos{background:var(--verde-pale);border:1px solid var(--verde-light)}.cb-prof-pos .cb-lbl,.cb-prof-pos .cb-val{color:var(--verde)font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
+.cb-prof-neg{background:var(--rosso-pale);border:1px solid var(--rosso-light)}.cb-prof-neg .cb-lbl,.cb-prof-neg .cb-val{color:var(--rosso)font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;}
 
 /* ===== DETTAGLIO CARD ===== */
 .det-card{background:var(--card);border:1px solid var(--bordo);border-radius:18px;margin-bottom:13px;overflow:hidden;box-shadow:0 2px 10px var(--ombra)}
@@ -319,7 +319,7 @@ var CAT_CLS={'Grande Distribuzione':'cat-gd','GROSSISTA-+DISTRIBUTORE':'cat-gr',
 
 var selCat=CATEGORIE[0],selCliente=null;
 document.getElementById('logo-img').src=LOGO_SRC;
-function e(v){if(v==null||v===''||isNaN(Number(v)))return '-'; return parseFloat(v).toFixed(2).replace('.',',') + ' €';}
+function e(v){if(v==null||v===''||isNaN(Number(v)))return '-'; return '€' + parseFloat(v).toFixed(2).replace('.',',');}
 
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
