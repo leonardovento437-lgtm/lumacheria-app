@@ -265,6 +265,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif,sa
       <span class="search-ico">🔍</span>
       <input class="search-bar" type="text" placeholder="Cerca per nome o codice..." oninput="renderDettaglio(this.value)"/>
     </div>
+    <button onclick="nuovoDettaglio()" style="display:block;width:100%;padding:11px;background:#8B1A1A;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px">➕ Aggiungi prezzi per categoria</button>
     <div id="lista-dettaglio"></div>
   </div>
 </div>
@@ -946,28 +947,72 @@ function eliminaDettaglio(codice, cat) {
 }
 
 
-function eliminaProdotto(id, nome) {
-  if (!confirm('Eliminare "' + nome + '"?')) return;
-  var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'deleteRow', sheet:'prodotti', id:id}));
-  fetch(url)
-    .then(function(r){ return r.json(); })
-    .then(function(d){ if(d.ok) loadFromGAS(); else alert('Errore: ' + JSON.stringify(d)); })
-    .catch(function(e){ alert('Errore: ' + e.message); });
+function nuovoDettaglio() {
+  var modal = getModal();
+  var cats = ['GROSSISTA-+DISTRIBUTORE','RISTORATORI','ALLEVATORI','PRIVATI','E-COMMERCE FOOD','Grande Distribuzione','N/D','AGRITURISMO','RIVENDITORI','NEGOZI','Grossista / Distributore','Allevatore Estero','Sagre'];
+  var catOpts = cats.map(function(c){ return '<option value="'+c+'">'+c+'</option>'; }).join('');
+
+  modal.innerHTML = '<div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto">' +
+    '<div style="font-weight:700;font-size:16px;margin-bottom:14px">➕ Nuovo prodotto + prezzi</div>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:12px;background:#f5f5f5;padding:8px;border-radius:8px">Dati prodotto</div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Codice *</label><input id="nd_cod" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Nome</label><input id="nd_nome" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Unità</label><input id="nd_unita" value="NR" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">CVU</label><input id="nd_cvu" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">CFU</label><input id="nd_cfu" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Costo Totale</label><input id="nd_ct" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">CT2</label><input id="nd_ct2" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Prezzo Medio 2025</label><input id="nd_pmedio" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:16px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Prezzo Consigliato</label><input id="nd_pc" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="font-size:11px;color:#888;margin-bottom:12px;background:#f5f5f5;padding:8px;border-radius:8px">Prezzi per categoria (opzionale)</div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Categoria Cliente</label><select id="nd_cat" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box">'+catOpts+'</select></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Prezzo Minimo</label><input id="nd_min" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Prezzo Medio</label><input id="nd_med" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="margin-bottom:10px"><label style="display:block;font-size:12px;color:#666;margin-bottom:3px">Prezzo Massimo</label><input id="nd_max" value="0" style="width:100%;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box"></div>' +
+    '<div style="display:flex;gap:8px;margin-top:16px">' +
+    '<button id="m-cancel" style="flex:1;padding:10px;background:#f0f0f0;border:none;border-radius:10px;font-size:14px;cursor:pointer">Annulla</button>' +
+    '<button id="m-save" style="flex:1;padding:10px;background:#8B1A1A;color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer">Salva</button>' +
+    '</div></div>';
+
+  modal.style.display = 'flex';
+  document.getElementById('m-cancel').onclick = function(){ modal.style.display='none'; };
+  document.getElementById('m-save').onclick = function() {
+    var codice = document.getElementById('nd_cod').value.trim();
+    if (!codice) { alert('Il codice è obbligatorio'); return; }
+    var btn = document.getElementById('m-save');
+    btn.textContent='⏳'; btn.disabled=true;
+
+    var newId = 'P' + Date.now();
+    var ct = Number(document.getElementById('nd_ct').value)||0;
+    var pc = Number(document.getElementById('nd_pc').value)||0;
+    var prodData = {
+      id: newId, codice: codice,
+      nome: document.getElementById('nd_nome').value,
+      unita: document.getElementById('nd_unita').value||'NR',
+      cvu: Number(document.getElementById('nd_cvu').value)||0,
+      cfu: Number(document.getElementById('nd_cfu').value)||0,
+      costo_tot: ct, ct2: Number(document.getElementById('nd_ct2').value)||0,
+      p_medio_2025: Number(document.getElementById('nd_pmedio').value)||0,
+      prezzo_consigliato: pc,
+      profitto_consigliato: Math.round((pc-ct)*100)/100
+    };
+
+    var cat = document.getElementById('nd_cat').value;
+    var detData = {
+      id: codice + '_' + cat.replace(/[^a-zA-Z0-9]/g,'_'),
+      codice: codice, categoria: cat,
+      prezzo_min: Number(document.getElementById('nd_min').value)||0,
+      prezzo_medio: Number(document.getElementById('nd_med').value)||0,
+      prezzo_max: Number(document.getElementById('nd_max').value)||0,
+      qty: 0, fatturato: 0
+    };
+
+    // Save product first, then dettaglio
+    gasPost({action:'saveRow', sheet:'prodotti', data:prodData}, function(){
+      gasPost({action:'saveRow', sheet:'dettaglio', data:detData}, function(){
+        modal.style.display='none'; loadFromGAS();
+      }, function(err){ alert('Errore dettaglio: '+err); btn.textContent='Salva'; btn.disabled=false; });
+    }, function(err){ alert('Errore prodotto: '+err); btn.textContent='Salva'; btn.disabled=false; });
+  };
 }
-
-function eliminaCliente(id, nome) {
-  if (!confirm('Eliminare "' + nome + '"?')) return;
-  // Remove from embedded array too
-  var idx = CLIENTI.findIndex(function(x){ return x.id===String(id); });
-  if (idx !== -1) CLIENTI.splice(idx, 1);
-  renderClienti(document.getElementById('clienti-search').value || '');
-  // Also delete from GAS if it was added there
-  var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'deleteRow', sheet:'clienti', id:id}));
-  fetch(url).catch(function(){});
-}
-
-
-loadFromGAS();
-</script>
-</body>
-</html>
+>
