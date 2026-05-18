@@ -862,6 +862,12 @@ function nuovoProdotto() {
     var btn = document.getElementById('m-save');
     btn.textContent='⏳'; btn.disabled=true;
     gasPost({action:'saveRow', sheet:'prodotti', data:data}, function(){
+      // Aggiungi al DB locale subito
+      data.dettaglio = {};
+      var exists = DB.findIndex(function(x){ return x.codice===data.codice; });
+      if (exists >= 0) { DB[exists] = data; } else { DB.push(data); }
+      var ps = document.getElementById('hc-prod-sub');
+      if (ps) ps.textContent = DB.length + ' prodotti · CVU, CFU, CT, prezzi';
       modal.style.display='none'; loadFromGAS();
     }, function(err){ alert('Errore: '+err); btn.textContent='Salva'; btn.disabled=false; });
   };
@@ -940,12 +946,40 @@ function nuovoDettaglio() {
 
     // Save product first, then dettaglio
     gasPost({action:'saveRow', sheet:'prodotti', data:prodData}, function(){
+      // Aggiungi al DB locale subito
+      prodData.dettaglio = {};
+      var exists = DB.findIndex(function(x){ return x.codice===prodData.codice; });
+      if (exists >= 0) { DB[exists] = prodData; } else { DB.push(prodData); }
       gasPost({action:'saveRow', sheet:'dettaglio', data:detData}, function(){
         modal.style.display='none'; loadFromGAS();
       }, function(err){ alert('Errore dettaglio: '+err); btn.textContent='Salva'; btn.disabled=false; });
     }, function(err){ alert('Errore prodotto: '+err); btn.textContent='Salva'; btn.disabled=false; });
   };
 }
+
+function eliminaProdotto(id, nome) {
+  if (!confirm('Eliminare "' + nome + '"?')) return;
+  var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'deleteRow', sheet:'prodotti', id:id}));
+  fetch(url).then(function(r){ return r.json(); }).then(function(){ loadFromGAS(); }).catch(function(e){ alert('Errore: ' + e.message); });
+}
+
+function eliminaCliente(id, nome) {
+  if (!confirm('Eliminare "' + nome + '"?')) return;
+  var idx = CLIENTI.findIndex(function(x){ return x.id===String(id); });
+  if (idx !== -1) CLIENTI.splice(idx, 1);
+  renderClienti(document.getElementById('clienti-search').value || '');
+  var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'deleteRow', sheet:'clienti', id:id}));
+  fetch(url).catch(function(){});
+}
+
+function eliminaDettaglio(codice, cat) {
+  if (!confirm('Eliminare la categoria "' + cat + '" per ' + codice + '?')) return;
+  var id = codice + '_' + cat.replace(/[^a-zA-Z0-9]/g,'_');
+  var url = GAS_URL + '?action=write&data=' + encodeURIComponent(JSON.stringify({action:'deleteRow', sheet:'dettaglio', id:id}));
+  fetch(url).then(function(r){ return r.json(); }).then(function(){ loadFromGAS(); }).catch(function(e){ alert('Errore: ' + e.message); });
+}
+
+loadFromGAS();
 
 </script>
 </body>
